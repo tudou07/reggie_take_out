@@ -15,9 +15,12 @@ import com.itheima.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -32,6 +35,9 @@ public class DishController {
 
     @Autowired
     private DishFlavorService dishFlavorService;
+
+    @Autowired
+    private RedisTemplate<Object, Object> redisTemplate;
 
     //菜品保存
     @PostMapping
@@ -81,17 +87,36 @@ public class DishController {
     public R<String> change(@RequestBody DishDto dishDto){
         log.info("修改菜品提交成功...");
         dishService.updateWithFlavor(dishDto);
+
+        //清理所有菜品缓存数据
+//        Set<Object> keys = redisTemplate.keys("dish_*");
+//        redisTemplate.delete(keys);
+        //清理某个分类下菜品缓存数据
+        String key = "dish_" + dishDto.getCategoryId() + "_1";
+        redisTemplate.delete(key);
+
         return R.success("菜品信息修改成功");
     }
 
     //根据分类ID查询
     @GetMapping("/list")
     public R<List<DishDto>> listDish(Setmeal setmeal){
+
+        List<DishDto> dtoList = null;
+        //动态构造key
+        String key = "dish_" + setmeal.getCategoryId() + "_" + setmeal.getStatus();
+        //先从redis中获取缓存数据
+        dtoList = (List<DishDto>) redisTemplate.opsForValue().get(key);
+        if (dtoList != null){
+            //如果缓存中有，则返回
+            return R.success(dtoList);
+        }
+        //如果缓存中没有，则查询数据库
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Dish::getCategoryId, setmeal.getCategoryId());
         queryWrapper.eq(Dish::getStatus, 1);
         List<Dish> list = dishService.list(queryWrapper);
-        List<DishDto> dtoList = list.stream().map(item -> {
+        dtoList = list.stream().map(item -> {
             DishDto dishDto = new DishDto();
             BeanUtils.copyProperties(item, dishDto);
             LambdaQueryWrapper<DishFlavor> wrapper = new LambdaQueryWrapper<>();
@@ -100,6 +125,7 @@ public class DishController {
             dishDto.setFlavors(flavorList);
             return dishDto;
         }).collect(Collectors.toList());
+        redisTemplate.opsForValue().set(key, dtoList, 60, TimeUnit.MINUTES);
         return R.success(dtoList);
     }
 
