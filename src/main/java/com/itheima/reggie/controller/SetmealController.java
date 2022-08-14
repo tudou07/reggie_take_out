@@ -11,6 +11,8 @@ import com.itheima.reggie.service.SetmealDishService;
 import com.itheima.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +29,7 @@ public class SetmealController {
 
     //保存套餐
     @PostMapping
+    @CacheEvict(value = "setmealCache", allEntries = true)
     public R<String> save(@RequestBody SetmealDto setmealDto){
         log.info("保存套餐setmealDto：{}",setmealDto);
         setmealService.saveWithDish(setmealDto);
@@ -76,6 +79,7 @@ public class SetmealController {
 
     //条件查询套餐
     @GetMapping("/list")
+    @Cacheable(value = "setmealCache", key = "#setmeal.categoryId + '_' + #setmeal.status")
     public R<List<Setmeal>> list(Setmeal setmeal){
         log.info("条件查询套餐。。。条件为：{}",setmeal);
         LambdaQueryWrapper<Setmeal> wrapper = new LambdaQueryWrapper<>();
