@@ -53,4 +53,4 @@ mybatis-plus:
       id-type: ASSIGN_ID
 
 upload:
-  path: "D:\\Java\\fileTest\\img\\"
+  path: /usr/local/img
