@@ -26,7 +26,7 @@ public class LoginCheckFilter2 implements Filter {
         String requestURL = request.getRequestURI();
 //        log.info("过滤器启动过滤。。。拦截到请求：{}",requestURL);
         //定义不需要处理的请求路径
-        String[] paths = new String[]{"/employee/login","employee/logout","/backend/**","/front/**","/user/login"};
+        String[] paths = new String[]{"/employee/login","employee/logout","/backend/**","/front/**","/user/login","/doc.html","/webjars/**","/swagger-resources","/v2/api-docs"};
         boolean check = check(paths, requestURL);
 //        log.info("check={}",check);
         if (check){
